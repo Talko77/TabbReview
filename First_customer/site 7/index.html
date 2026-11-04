@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="סופר מפתח">
+<title>סופר מפתח טמבוריה – דרגו אותנו בגוגל</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Karantina:wght@400;700&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root {
+  --bg: #E3E7EA;
+  --bg-deep: #CDD4DA;
+  --peg: rgba(28,40,48,.10);
+  --ink: #1C2830;
+  --ink-soft: #46545E;
+  --brass: #A87B22;
+  --brass-light: #E0BC62;
+  --glow: rgba(224,188,98,.45);
+  --tag: #FFFFFF;
+  --tag-edge: #C9CFD4;
+  --red: #C3343B;
+  --wa: #1F8F55;
+  --chip: rgba(28,40,48,.06);
+  --chip-on: #1C2830;
+  --chip-on-ink: #F4F1E8;
+  --display: "Karantina", "Arial Narrow", "Rubik", sans-serif;
+  --body: "Rubik", "Assistant", "Arial", sans-serif;
+  --pad: 4.2vmin;
+  --tagw: min(50vmin, 35vw);
+  --ease-out: cubic-bezier(.16,1,.3,1);
+  color-scheme: light;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1A242B; --bg-deep: #0F161A; --peg: rgba(238,241,243,.07); --ink: #EEF1F3; --ink-soft: #B3BEC5;
+    --brass: #D6AE4E; --brass-light: #F1D58C; --glow: rgba(214,174,78,.28); --tag-edge: #3A4851;
+    --red: #E86A70; --wa: #3DBE7A; --chip: rgba(238,241,243,.07); --chip-on: #F1D58C; --chip-on-ink: #1A242B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1A242B; --bg-deep: #0F161A; --peg: rgba(238,241,243,.07); --ink: #EEF1F3; --ink-soft: #B3BEC5;
+  --brass: #D6AE4E; --brass-light: #F1D58C; --glow: rgba(214,174,78,.28); --tag-edge: #3A4851;
+  --red: #E86A70; --wa: #3DBE7A; --chip: rgba(238,241,243,.07); --chip-on: #F1D58C; --chip-on-ink: #1A242B;
+  color-scheme: dark;
+}
+html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: inherit; margin: 0; padding: 0; }
+body {
+  height: 100%;
+  position: relative;
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ---------- Screens + circular reveal ---------- */
+.screen {
+  --x: 50%; --y: 50%;
+  position: absolute;
+  inset: 0;
+  padding: var(--pad) calc(var(--pad) * 1.3);
+  padding-left: max(calc(var(--pad) * 1.3), env(safe-area-inset-left, 0px));
+  padding-right: max(calc(var(--pad) * 1.3), env(safe-area-inset-right, 0px));
+  overflow: hidden;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(circle, var(--peg) 1.6px, transparent 2px),
+    radial-gradient(120% 90% at 70% 0%, var(--bg) 35%, var(--bg-deep) 100%);
+  background-size: 30px 30px, 100% 100%;
+  animation: drift 40s linear infinite;
+  clip-path: circle(0% at var(--x) var(--y));
+  visibility: hidden;
+  z-index: 1;
+  transition: clip-path .8s cubic-bezier(.7,0,.2,1), visibility 0s linear .8s;
+}
+.screen.active { clip-path: circle(150% at var(--x) var(--y)); visibility: visible; z-index: 3; transition: clip-path .8s cubic-bezier(.7,0,.2,1), visibility 0s; }
+.screen.leaving { clip-path: circle(150% at var(--x) var(--y)); visibility: visible; z-index: 2; transition: none; }
+@keyframes drift { to { background-position: 30px 60px, 0 0; } }
+
+.reveal .w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .06em; }
+.reveal .w > span { display: inline-block; transform: translateY(105%); }
+.screen.active .reveal .w > span { animation: rise .9s var(--ease-out) forwards; }
+.screen.active .reveal .w:nth-child(2) > span { animation-delay: .1s; }
+.screen.active .reveal .w:nth-child(3) > span { animation-delay: .2s; }
+@keyframes rise { to { transform: none; } }
+.fade-in { opacity: 0; }
+.screen.active .fade-in { animation: fadeUp .8s var(--ease-out) forwards; animation-delay: var(--d, .4s); }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Main (always ready) ---------- */
+#main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas: "pitch tag" "nfc nfc";
+  column-gap: 3vw;
+  row-gap: 2vmin;
+}
+.decor { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; color: var(--ink); }
+.decor svg { position: absolute; opacity: .08; animation: float var(--dur, 9s) ease-in-out infinite alternate; }
+@keyframes float { from { transform: translate(0,0) rotate(var(--r, 0deg)); } to { transform: translate(var(--dx, 12px), var(--dy, -26px)) rotate(calc(var(--r, 0deg) + 14deg)); } }
+
+.pitch { grid-area: pitch; position: relative; z-index: 1; align-self: center; display: flex; flex-direction: column; align-items: flex-start; gap: 2.6vmin; min-width: 0; }
+.brand { display: flex; align-items: center; gap: 1.6vmin; flex-wrap: wrap; }
+.shopname { font-weight: 700; font-size: clamp(1rem, 3vmin, 1.8rem); }
+.address { color: var(--ink-soft); font-size: clamp(.9rem, 2.3vmin, 1.35rem); }
+.dot { width: .35em; height: .35em; border-radius: 50%; background: var(--brass); }
+
+.rating {
+  display: inline-flex; align-items: center; gap: .5em;
+  background: var(--tag); color: #1C2830;
+  border: 1px solid var(--tag-edge);
+  border-radius: 999px; padding: .4em .95em .4em .8em;
+  font-size: clamp(.95rem, 2.6vmin, 1.5rem); font-weight: 500;
+  box-shadow: 0 1vmin 2.4vmin -1.4vmin rgba(10,20,28,.35);
+}
+.rating[hidden] { display: none; }
+.rating .g { width: 1.15em; height: 1.15em; }
+.rnum { font-weight: 700; font-variant-numeric: tabular-nums; }
+.rstars { position: relative; color: #D5D9DD; letter-spacing: .04em; line-height: 1; }
+.rstars::before { content: "★★★★★"; }
+.rfill { position: absolute; top: 0; right: 0; height: 100%; width: 0; overflow: hidden; white-space: nowrap; color: #F4B400; transition: width 1.6s var(--ease-out) .6s; }
+.rfill::before { content: "★★★★★"; }
+.rcount { color: #4C5A64; font-weight: 400; }
+
+.big { font-family: var(--display); font-weight: 700; font-size: min(17vmin, 9.2vw); line-height: .84; letter-spacing: -.005em; }
+.big .line { display: block; }
+.big .accent { color: var(--brass); }
+.lead { color: var(--ink-soft); font-size: clamp(1.05rem, 3vmin, 1.85rem); line-height: 1.35; max-width: 30ch; }
+.lead strong { color: var(--ink); font-weight: 700; }
+
+.steps { list-style: none; display: flex; align-items: center; gap: .9vmin; flex-wrap: wrap; }
+.step {
+  display: inline-flex; align-items: center; gap: .5em; white-space: nowrap;
+  padding: .5em .95em .5em .7em; border-radius: 999px;
+  background: var(--chip); color: var(--ink);
+  font-size: clamp(.85rem, 2.2vmin, 1.3rem); font-weight: 500;
+  transition: background .5s ease, color .5s ease, transform .5s var(--ease-out);
+}
+.step .n { display: grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%; background: var(--bg); color: var(--ink); font-size: .85em; font-weight: 700; transition: background .5s ease, color .5s ease; }
+.step.on { background: var(--chip-on); color: var(--chip-on-ink); transform: translateY(-2px); }
+.step.on .n { background: var(--brass-light); color: #1C2830; }
+.chev { width: 1.1em; height: 1.1em; color: var(--ink-soft); opacity: .6; flex: none; }
+
+.btn {
+  appearance: none; border: 0; cursor: pointer; font: inherit; color: inherit;
+  display: inline-flex; align-items: center; gap: .6em;
+  font-size: clamp(.95rem, 2.5vmin, 1.5rem); font-weight: 500;
+  padding: .75em 1.15em; border-radius: 1em; text-align: start; line-height: 1.25;
+  min-height: 48px;
+  transition: transform .15s ease, background .2s ease;
+}
+.btn:active { transform: scale(.96); }
+.btn:focus-visible { outline: 3px solid var(--brass); outline-offset: 3px; }
+.btn svg { width: 1.35em; height: 1.35em; flex: none; }
+.btn-ghost { background: color-mix(in srgb, var(--bg) 75%, transparent); border: 2px solid color-mix(in srgb, var(--ink-soft) 70%, transparent); }
+.btn-ghost .ico-red { color: var(--red); }
+.btn-solid { background: var(--ink); color: var(--bg); }
+
+/* keyring: ring + hanging key + QR tag */
+.tagcol { grid-area: tag; position: relative; z-index: 1; align-self: center; display: flex; justify-content: flex-end; padding-inline-start: calc(var(--tagw) * .3); }
+.tagcol::before {
+  content: ""; position: absolute; left: calc(var(--tagw) * -.15); top: 8%; width: calc(var(--tagw) * 1.3); aspect-ratio: 1;
+  background: radial-gradient(closest-side, var(--glow), transparent);
+  animation: breathe 5s ease-in-out infinite; pointer-events: none;
+}
+@keyframes breathe { 0%, 100% { opacity: .55; scale: .94; } 50% { opacity: 1; scale: 1.04; } }
+.keyring { position: relative; width: var(--tagw); padding-top: calc(var(--tagw) * .085); transform-origin: 50% calc(var(--tagw) * .085); }
+.screen.active .keyring { animation: drop 1.6s cubic-bezier(.2,.9,.3,1) .15s both, sway 6s ease-in-out 1.8s infinite; }
+.screen.active .keyring.jingle { animation: jingle 1.5s cubic-bezier(.3,.7,.4,1) both; }
+@keyframes drop { 0% { translate: 0 -10%; rotate: -12deg; opacity: 0; } 20% { opacity: 1; } 42% { translate: 0 0; rotate: 6deg; } 64% { rotate: -3deg; } 84% { rotate: 1deg; } 100% { rotate: 0deg; opacity: 1; } }
+@keyframes sway { 0%, 100% { rotate: 0deg; } 50% { rotate: 1.3deg; } }
+@keyframes jingle { 0% { rotate: 0deg; } 14% { rotate: -5deg; } 34% { rotate: 3.6deg; } 54% { rotate: -2deg; } 74% { rotate: .9deg; } 100% { rotate: 0deg; } }
+.ring { position: absolute; top: 0; left: 50%; width: calc(var(--tagw) * .17); height: auto; transform: translateX(-50%); z-index: 3; overflow: visible; }
+.ring circle { fill: none; stroke: var(--brass); stroke-width: 7; }
+.ring .hi { stroke: var(--brass-light); stroke-width: 2.5; stroke-dasharray: 40 200; stroke-linecap: round; }
+#private .ring circle { stroke: var(--wa); }
+#private .ring .hi { stroke: #7BD8A6; }
+.hkey {
+  position: absolute; z-index: 0;
+  width: calc(var(--tagw) * .3667); height: calc(var(--tagw) * 1.1);
+  left: calc(var(--tagw) * .382); top: calc(var(--tagw) * -.047);
+  transform-origin: 50% 12%; rotate: -52deg; overflow: visible;
+  filter: drop-shadow(0 1.2vmin 1.6vmin rgba(10,20,28,.28));
+}
+.screen.active .keyring.jingle .hkey { animation: keyjingle 1.6s cubic-bezier(.3,.7,.4,1) .08s both; }
+@keyframes keyjingle { 0% { rotate: -52deg; } 18% { rotate: -40deg; } 40% { rotate: -60deg; } 62% { rotate: -47deg; } 82% { rotate: -54deg; } 100% { rotate: -52deg; } }
+.hkey .hole { fill: var(--bg); }
+.hkey .groove { stroke: rgba(0,0,0,.18); stroke-width: 3; stroke-linecap: round; }
+.tag {
+  position: relative; z-index: 1;
+  width: var(--tagw);
+  background: var(--tag);
+  border: 2px solid var(--tag-edge);
+  border-radius: calc(var(--tagw) * .12) calc(var(--tagw) * .12) calc(var(--tagw) * .05) calc(var(--tagw) * .05);
+  padding: calc(var(--tagw) * .12) calc(var(--tagw) * .08) calc(var(--tagw) * .055);
+  box-shadow: 0 3vmin 6vmin -2.5vmin rgba(10,20,28,.42);
+}
+.tag::before {
+  content: ""; position: absolute; top: calc(var(--tagw) * .035); left: 50%;
+  width: calc(var(--tagw) * .055); aspect-ratio: 1; transform: translateX(-50%);
+  border-radius: 50%; background: var(--bg-deep); border: 2px solid var(--tag-edge);
+}
+.qr-frame { position: relative; padding: calc(var(--tagw) * .03); }
+.qr-frame .corner { position: absolute; width: 18%; height: 18%; border: calc(var(--tagw) * .012) solid var(--brass); animation: aim 2.4s ease-in-out infinite; }
+.corner.tl { top: 0; left: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 10px; }
+.corner.tr { top: 0; right: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 10px; }
+.corner.bl { bottom: 0; left: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 10px; }
+.corner.br { bottom: 0; right: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 10px; }
+#private .corner { border-color: #1F8F55; }
+@keyframes aim { 0%, 100% { scale: 1; } 50% { scale: .9; } }
+.qr { position: relative; width: 100%; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden; }
+.qr img, .qr canvas { width: 100% !important; height: auto !important; display: block; image-rendering: pixelated; }
+.qr::after {
+  content: ""; position: absolute; left: -4%; right: -4%; height: 3px; top: 0;
+  background: linear-gradient(90deg, transparent, #E0BC62, transparent);
+  box-shadow: 0 0 14px 3px rgba(224,188,98,.55);
+  opacity: .7; animation: scan 2.8s ease-in-out infinite alternate;
+}
+#private .qr::after { background: linear-gradient(90deg, transparent, #3DBE7A, transparent); box-shadow: 0 0 14px 3px rgba(61,190,122,.5); }
+@keyframes scan { from { top: 2%; } to { top: 97%; } }
+.qr-fallback { color: #1C2830; font-size: .85rem; word-break: break-all; }
+.tag-label { color: #1C2830; font-weight: 700; font-size: calc(var(--tagw) * .064); margin-top: calc(var(--tagw) * .03); display: flex; align-items: center; justify-content: center; gap: .45em; }
+.tag-label .g { width: 1.2em; height: 1.2em; }
+.wa-label svg { color: #1F8F55; }
+
+/* NFC bar anchored to the bottom edge, where the sticker is */
+.nfc-bar {
+  grid-area: nfc; position: relative; z-index: 1; justify-self: center;
+  display: inline-flex; align-items: center; gap: 1.6vmin;
+  padding: .5em 1.3em; border-radius: 999px;
+  background: var(--chip);
+  font-weight: 700; font-size: clamp(1rem, 2.8vmin, 1.65rem);
+}
+.nfc-bar .sub { font-weight: 400; color: var(--ink-soft); }
+.phone { width: 1.8em; height: 1.8em; flex: none; overflow: visible; color: var(--brass); }
+.phone .body { animation: approach 2.4s var(--ease-out) infinite; }
+.phone .wave { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; opacity: 0; animation: wave 2.4s ease-out infinite; transform-origin: 24px 44px; transform-box: view-box; }
+.phone .wave:nth-of-type(2) { animation-delay: .25s; }
+.phone .wave:nth-of-type(3) { animation-delay: .5s; }
+@keyframes approach { 0% { transform: translateY(-6px); } 40%, 70% { transform: translateY(4px); } 100% { transform: translateY(-6px); } }
+@keyframes wave { 0%, 35% { opacity: 0; transform: scale(.6); } 50% { opacity: .9; } 85%, 100% { opacity: 0; transform: scale(1.25); } }
+.downs { display: inline-flex; flex-direction: column; color: var(--brass); line-height: 0; }
+.downs svg { width: 1em; height: .6em; animation: chev 1.4s ease-in-out infinite; }
+.downs svg:nth-child(2) { animation-delay: .18s; margin-top: -.12em; }
+@keyframes chev { 0%, 100% { opacity: .25; transform: translateY(-2px); } 50% { opacity: 1; transform: translateY(3px); } }
+
+/* ---------- Private ---------- */
+#private {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "pitch tag";
+  column-gap: 5vw;
+}
+#private .pitch { gap: 3vmin; }
+#private .tagcol { padding-inline-start: 0; }
+.title { font-family: var(--display); font-weight: 700; font-size: min(14vmin, 7.8vw); line-height: .88; }
+.wa-steps { display: grid; gap: 1.6vmin; list-style: none; font-size: clamp(1rem, 2.8vmin, 1.65rem); color: var(--ink-soft); }
+.wa-steps li { display: flex; align-items: center; gap: .7em; }
+.wa-steps .n { display: grid; place-items: center; width: 1.7em; height: 1.7em; border-radius: 50%; background: var(--chip); color: var(--ink); font-weight: 700; font-size: .85em; flex: none; }
+.drain { position: absolute; top: 0; left: 0; right: 0; height: 5px; z-index: 5; background: linear-gradient(90deg, var(--brass), var(--brass-light)); transform-origin: right; transform: scaleX(0); }
+.drain.run { animation: drainbar var(--t, 40s) linear forwards; }
+@keyframes drainbar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* ---------- Thanks ---------- */
+#thanks { display: grid; place-items: center; text-align: center; cursor: pointer; }
+#confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.thanks-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2.4vmin; max-width: 90vw; }
+.thanks-big { font-family: var(--display); font-weight: 700; font-size: min(24vmin, 14vw); line-height: .85; }
+.thanks-sub { font-size: clamp(1.15rem, 3.8vmin, 2.3rem); color: var(--ink-soft); max-width: 30ch; line-height: 1.35; }
+.thanks-sub strong { color: var(--ink); }
+.badge { width: clamp(70px, 15vmin, 140px); height: auto; transform: scale(0); }
+.screen.active .badge { animation: pop .8s cubic-bezier(.34,1.8,.5,1) .15s forwards; }
+@keyframes pop { to { transform: scale(1); } }
+
+/* ---------- Portrait fallback ---------- */
+@media (orientation: portrait) {
+  :root { --tagw: min(52vw, 31vh); }
+  #main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    grid-template-areas: "pitch" "tag" "nfc";
+    align-content: space-evenly; justify-items: center; text-align: center;
+  }
+  .pitch { align-items: center; }
+  .big { font-size: 16vmin; }
+  .pitch { gap: 2vmin; }
+  .lead { margin-inline: auto; }
+  .steps { justify-content: center; }
+  .tagcol { justify-content: center; padding-inline-start: 0; }
+  #private { grid-template-columns: 1fr; grid-template-rows: auto auto; grid-template-areas: "pitch" "tag"; align-content: space-evenly; justify-items: center; text-align: center; }
+  #private .pitch { align-items: center; }
+  .title { font-size: 13vmin; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01s !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: .01s !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== המסך הראשי: הקוד גלוי תמיד ===== -->
+<section class="screen active" id="main" aria-label="דרגו אותנו בגוגל">
+  <div class="decor" aria-hidden="true">
+    <svg style="top:6%;left:46%;width:5vmin;--dur:11s;--r:20deg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="12" r="4"/><path d="M11 12h10M17 12v3M20 12v2"/></svg>
+    <svg style="top:84%;left:4%;width:6vmin;--dur:12s;--r:-30deg;--dy:-30px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.5"/></svg>
+    <svg style="top:5%;right:3%;width:4.5vmin;--dur:14s;--r:-10deg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 16.8 5.8 20.3l1.6-6.8L2.2 8.9l6.9-.6z"/></svg>
+    <svg style="top:86%;right:6%;width:5vmin;--dur:10s;--r:40deg;--dx:-18px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z"/></svg>
+    <svg style="top:4%;left:3%;width:4.5vmin;--dur:9s;--r:10deg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l8.7 5v10L12 22l-8.7-5V7z"/><circle cx="12" cy="12" r="3.5"/></svg>
+  </div>
+
+  <div class="pitch">
+    <div class="brand fade-in" style="--d:.05s">
+      <span class="shopname" id="bizName">סופר מפתח טמבוריה</span>
+      <span class="dot" aria-hidden="true"></span>
+      <span class="address" id="bizAddress">בוגרשוב 11, תל אביב</span>
+    </div>
+
+    <div class="rating fade-in" id="rating" style="--d:.25s" hidden>
+      <svg class="g" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.9 6.2C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C.9 16.6 0 20.2 0 24s.9 7.4 2.6 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.1-13.5-9.9l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>
+      <span class="rnum" id="rNum">4.8</span>
+      <span class="rstars" aria-hidden="true"><span class="rfill" id="rFill"></span></span>
+      <span class="rcount" id="rCount">25 ביקורות</span>
+    </div>
+
+    <h1 class="big reveal">
+      <span class="line"><span class="w"><span>איך</span></span> <span class="w"><span>היה</span></span></span>
+      <span class="line"><span class="w"><span class="accent">אצלנו?</span></span></span>
+    </h1>
+
+    <p class="lead fade-in" style="--d:.55s"><strong>סרקו את הקוד עם המצלמה</strong> וכתבו לנו ביקורת בגוגל. פחות מדקה.</p>
+
+    <ol class="steps fade-in" style="--d:.75s" aria-label="איך זה עובד">
+      <li class="step on"><span class="n">1</span>סורקים</li>
+      <li aria-hidden="true"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></li>
+      <li class="step"><span class="n">2</span>מדרגים</li>
+      <li aria-hidden="true"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></li>
+      <li class="step"><span class="n">3</span>כותבים כמה מילים</li>
+    </ol>
+
+    <button class="btn btn-ghost fade-in" style="--d:.95s" data-go="private">
+      <svg class="ico-red" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>יש לכם הערה? כתבו לבעל העסק בפרטיות</span>
+    </button>
+  </div>
+
+  <div class="tagcol">
+    <div class="keyring" id="keyring">
+      <svg class="hkey" viewBox="0 0 200 600" aria-hidden="true">
+        <defs>
+          <linearGradient id="brassK" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#F1D58C"/>
+            <stop offset=".55" stop-color="#D9AE4C"/>
+            <stop offset="1" stop-color="#A87B22"/>
+          </linearGradient>
+          <linearGradient id="shineK" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+            <stop offset=".5" stop-color="#fff" stop-opacity=".8"/>
+            <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+          </linearGradient>
+          <clipPath id="keyclipK">
+            <circle cx="100" cy="100" r="82"/>
+            <path d="M168 78 H560 L584 100 L560 122 H540 L528 142 H512 L500 122 H480 L466 152 H450 L438 122 H420 L408 136 H392 L380 122 H360 L346 148 H330 L318 122 H300 L290 138 H274 L264 122 H168 Z"/>
+          </clipPath>
+        </defs>
+        <g transform="matrix(0 1 -1 0 200 0)">
+          <g fill="url(#brassK)">
+            <circle cx="100" cy="100" r="82"/>
+            <path d="M168 78 H560 L584 100 L560 122 H540 L528 142 H512 L500 122 H480 L466 152 H450 L438 122 H420 L408 136 H392 L380 122 H360 L346 148 H330 L318 122 H300 L290 138 H274 L264 122 H168 Z"/>
+          </g>
+          <g clip-path="url(#keyclipK)">
+            <rect x="-200" y="-20" width="110" height="240" fill="url(#shineK)" transform="skewX(-22)">
+              <animate attributeName="x" values="-200;820;820" keyTimes="0;0.4;1" dur="6s" repeatCount="indefinite"/>
+            </rect>
+          </g>
+          <circle class="hole" cx="72" cy="100" r="26"/>
+          <line class="groove" x1="200" y1="96" x2="540" y2="96"/>
+        </g>
+      </svg>
+      <svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="38"/><circle class="hi" cx="50" cy="50" r="38"/></svg>
+      <div class="tag">
+        <div class="qr-frame">
+          <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+          <div class="qr" id="qr-review" role="img" aria-label="קוד QR לכתיבת ביקורת בגוגל"></div>
+        </div>
+        <div class="tag-label">
+          <svg class="g" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.9 6.2C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C.9 16.6 0 20.2 0 24s.9 7.4 2.6 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.1-13.5-9.9l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>
+          ביקורת בגוגל
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nfc-bar fade-in" style="--d:1.1s">
+    <svg class="phone" viewBox="0 0 48 48" aria-hidden="true">
+      <g class="body" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><rect x="15" y="2" width="18" height="30" rx="4"/><path d="M21 27h6"/></g>
+      <path class="wave" d="M14 40 q10 6 20 0"/>
+      <path class="wave" d="M10 43 q14 8 28 0"/>
+      <path class="wave" d="M6 46 q18 9 36 0"/>
+    </svg>
+    <span>או קרבו את הטלפון למדבקה <span class="sub">שמתחת למסך</span></span>
+    <span class="downs" aria-hidden="true">
+      <svg viewBox="0 0 24 14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3l8 8 8-8"/></svg>
+      <svg viewBox="0 0 24 14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3l8 8 8-8"/></svg>
+    </span>
+  </div>
+</section>
+
+<!-- ===== הערה פרטית ===== -->
+<section class="screen" id="private" aria-label="הערה פרטית לבעל העסק">
+  <div class="drain" aria-hidden="true"></div>
+  <div class="pitch">
+    <h2 class="title reveal"><span class="w"><span>כתבו</span></span> <span class="w"><span>לבעל</span></span> <span class="w"><span>העסק</span></span></h2>
+    <ol class="wa-steps fade-in" style="--d:.45s">
+      <li><span class="n">1</span>סרקו את הקוד עם המצלמה</li>
+      <li><span class="n">2</span>ייפתח וואטסאפ עם הודעה מוכנה</li>
+      <li><span class="n">3</span>כתבו מה שתרצו ושלחו</li>
+    </ol>
+    <p class="lead fade-in" style="--d:.65s">ההודעה מגיעה <strong>רק לבעל העסק</strong>, והוא יוכל לחזור אליכם.</p>
+    <button class="btn btn-solid fade-in" style="--d:.85s" data-go="main">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+      <span>חזרה לביקורת בגוגל</span>
+    </button>
+  </div>
+  <div class="tagcol">
+    <div class="keyring">
+      <svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="38"/><circle class="hi" cx="50" cy="50" r="38"/></svg>
+      <div class="tag">
+        <div class="qr-frame">
+          <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+          <div class="qr" id="qr-private" role="img" aria-label="קוד QR לשליחת הודעה בוואטסאפ"></div>
+        </div>
+        <div class="tag-label wa-label">
+          <svg class="g" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l2 .9c.3.1.5.2.5.3.1.1.1.7-.1 1.4z"/></svg>
+          הודעה בוואטסאפ
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== תודה (מופיע לבד כשמישהו סורק) ===== -->
+<section class="screen" id="thanks" aria-label="תודה">
+  <div class="drain" aria-hidden="true"></div>
+  <canvas id="confetti"></canvas>
+  <div class="thanks-inner">
+    <svg class="badge" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#E0BC62" stroke="#A87B22" stroke-width="3"/><path d="M20 33l8 8 16-17" fill="none" stroke="#1C2830" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <h2 class="thanks-big reveal"><span class="w"><span id="thanksTitle">תודה רבה!</span></span></h2>
+    <p class="thanks-sub fade-in" style="--d:.45s" id="thanksSub">עכשיו ממשיכים בטלפון: <strong>בוחרים כוכבים</strong> וכותבים כמה מילים.</p>
+  </div>
+</section>
+
+<script>
+/* ====== הגדרות כלליות – זהות לכל העסקים ====== */
+const SUPABASE_URL = 'https://ojczheigsisebhnycehw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Q2lx3QG3iP7h81Qu5m-_-A_74G8sUYq';
+const DEFAULT_BIZ = 'super-mafteach';
+const CONFIG = { privateTimeoutSec: 40, thanksSec: 7, pollSec: 4, touchThrottleSec: 15 };
+
+// גיבוי: אם אין חיבור למסד בזמן הטעינה, העמדה עדיין עובדת עם הפרטים האלה
+const FALLBACK = {
+  'super-mafteach': {
+    name: 'סופר מפתח טמבוריה',
+    address: 'בוגרשוב 11, תל אביב',
+    place_id: 'ChIJu7gRsONNHRUR5loHwOCrSWM',
+    maps_query: 'סופר מפתח טמבוריה בוגרשוב 11 תל אביב',
+    whatsapp: '972522529604',
+    whatsapp_text: 'שלום, יש לי הערה על הביקור שלי בסופר מפתח:',
+    google_rating: 4.8,
+    google_reviews: 25
+  }
+};
+
+const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const hosted = location.protocol === 'https:' && !/claude|anthropic/.test(location.hostname);
+const sbReady = /^https:\/\//.test(SUPABASE_URL) && SUPABASE_KEY.length > 20;
+const BIZ = (new URLSearchParams(location.search).get('b') || DEFAULT_BIZ).trim().toLowerCase();
+let biz = Object.assign({ slug: BIZ }, FALLBACK[BIZ] || {});
+let bizStatus = 'fallback';
+
+function deviceName() {
+  const ua = navigator.userAgent;
+  if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return 'אייפד';
+  if (/iPhone/.test(ua)) return 'אייפון';
+  if (/Android/.test(ua)) return 'אנדרואיד';
+  return 'מחשב';
+}
+function sbHeaders(json) {
+  const h = { apikey: SUPABASE_KEY };
+  if (json) h['Content-Type'] = 'application/json';
+  return h;
+}
+function directReview(b) {
+  if (b.place_id) return 'https://search.google.com/local/writereview?placeid=' + encodeURIComponent(b.place_id);
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(b.maps_query || b.name || '');
+}
+function directWa(b) {
+  return b.whatsapp ? 'https://wa.me/' + b.whatsapp + '?text=' + encodeURIComponent(b.whatsapp_text || '') : '';
+}
+
+// רושם אירוע במסד: ישירות ל-Supabase, ואם זה נכשל – דרך האתר שלנו (/sb)
+function track(event, src, onDone) {
+  if (!sbReady) { if (onDone) onDone('not configured'); return false; }
+  const body = JSON.stringify({ p_biz: biz.slug, p_event: event, p_source: src || 'טאבלט', p_device: deviceName() });
+  const send = base => fetch(base + '/rest/v1/rpc/log_event', { method: 'POST', headers: sbHeaders(true), body: body, cache: 'no-store' });
+  send(SUPABASE_URL)
+    .then(r => { if (onDone) onDone('direct, status ' + r.status); })
+    .catch(() => {
+      if (!hosted) { if (onDone) onDone('failed'); return; }
+      send(location.origin + '/sb')
+        .then(r => { if (onDone) onDone('via proxy, status ' + r.status); })
+        .catch(err => { if (onDone) onDone('failed both: ' + err.message); });
+    });
+  return true;
+}
+
+function makeQR(id, text) {
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  if (!text) return;
+  if (typeof QRCode === 'undefined') {
+    const d = document.createElement('div');
+    d.className = 'qr-fallback';
+    d.textContent = text;
+    el.appendChild(d);
+    return;
+  }
+  new QRCode(el, { text: text, width: 600, height: 600, colorDark: '#16212A', colorLight: '#FFFFFF', correctLevel: QRCode.CorrectLevel.M });
+  el.removeAttribute('title');
+}
+
+function applyRating() {
+  const box = document.getElementById('rating');
+  const r = Number(biz.google_rating);
+  const n = Number(biz.google_reviews);
+  if (!r || r < 1 || r > 5) { box.hidden = true; return; }
+  box.hidden = false;
+  document.getElementById('rNum').textContent = r.toFixed(1);
+  document.getElementById('rCount').textContent = n ? n + ' ביקורות' : 'בגוגל';
+  const fill = document.getElementById('rFill');
+  fill.style.width = '0%';
+  requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = (r / 5 * 100) + '%'; }));
+}
+
+function applyBusiness() {
+  if (biz.name) {
+    document.getElementById('bizName').textContent = biz.name;
+    document.title = biz.name + ' – דרגו אותנו בגוגל';
+  }
+  document.getElementById('bizAddress').textContent = biz.address || '';
+  document.querySelector('#main .dot').style.display = biz.address ? '' : 'none';
+  const base = location.origin + '/r/?b=' + encodeURIComponent(biz.slug);
+  makeQR('qr-review', hosted ? base + '&s=qr' : directReview(biz));
+  makeQR('qr-private', hosted ? base + '&s=wa' : directWa(biz));
+  document.querySelectorAll('[data-go="private"]').forEach(btn => { btn.style.display = biz.whatsapp ? '' : 'none'; });
+  applyRating();
+}
+
+async function loadBusiness() {
+  if (!sbReady) { bizStatus = 'not configured (fallback)'; return; }
+  try {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/businesses?slug=eq.' + encodeURIComponent(BIZ) + '&select=*', { headers: sbHeaders(false), cache: 'no-store' });
+    if (!r.ok) { bizStatus = 'http ' + r.status + ' (fallback)'; return; }
+    const rows = await r.json();
+    if (!rows.length) { bizStatus = 'business not found (fallback)'; return; }
+    const fb = FALLBACK[BIZ] || {};
+    const row = rows[0];
+    // עמודות הדירוג אופציונליות: אם הן לא קיימות במסד, נשארים עם ערכי הגיבוי
+    if (!('google_rating' in row)) { row.google_rating = fb.google_rating; row.google_reviews = fb.google_reviews; }
+    biz = Object.assign({ slug: BIZ }, row);
+    bizStatus = 'loaded from database';
+    applyBusiness();
+  } catch (e) {
+    bizStatus = 'error: ' + e.message + ' (fallback)';
+  }
+}
+
+applyBusiness();
+loadBusiness();
+setInterval(loadBusiness, 30 * 60 * 1000);
+
+/* ---------- מעבר בין מסכים ---------- */
+let current = 'main';
+let timer = null;
+
+function startDrain(screenId, sec) {
+  const d = document.querySelector('#' + screenId + ' .drain');
+  if (!d) return;
+  d.classList.remove('run');
+  d.style.setProperty('--t', sec + 's');
+  void d.getBoundingClientRect();
+  d.classList.add('run');
+}
+
+function restartTimer() {
+  clearTimeout(timer);
+  if (current === 'private') {
+    startDrain('private', CONFIG.privateTimeoutSec);
+    timer = setTimeout(() => { track('חזרה אוטומטית'); show('main'); }, CONFIG.privateTimeoutSec * 1000);
+  }
+  if (current === 'thanks') {
+    startDrain('thanks', CONFIG.thanksSec);
+    timer = setTimeout(() => show('main'), CONFIG.thanksSec * 1000);
+  }
+}
+
+function show(name, x, y) {
+  if (name === current) return;
+  const prev = document.getElementById(current);
+  const next = document.getElementById(name);
+  next.style.setProperty('--x', x != null ? x + 'px' : '50%');
+  next.style.setProperty('--y', y != null ? y + 'px' : '50%');
+  prev.classList.remove('active');
+  prev.classList.add('leaving');
+  void next.getBoundingClientRect();
+  next.classList.add('active');
+  setTimeout(() => prev.classList.remove('leaving'), 820);
+  current = name;
+  if (name === 'thanks') fireConfetti();
+  restartTimer();
+}
+
+/* ---------- נגיעה במסך הראשי: הקוד מתנדנד + נרשם אירוע ---------- */
+const keyring = document.getElementById('keyring');
+function jingle() {
+  if (reduced) return;
+  keyring.classList.remove('jingle');
+  void keyring.getBoundingClientRect();
+  keyring.classList.add('jingle');
+}
+keyring.addEventListener('animationend', e => { if (e.animationName === 'jingle') keyring.classList.remove('jingle'); });
+let lastTouch = 0;
+document.getElementById('main').addEventListener('click', e => {
+  if (e.target.closest('button')) return;
+  jingle();
+  if (Date.now() - lastTouch > CONFIG.touchThrottleSec * 1000) { lastTouch = Date.now(); track('נגיעה במסך'); }
+});
+document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', e => {
+  e.stopPropagation();
+  if (b.dataset.go === 'private') track('פתיחת הערה פרטית');
+  show(b.dataset.go, e.clientX, e.clientY);
+}));
+document.getElementById('thanks').addEventListener('click', e => show('main', e.clientX, e.clientY));
+document.addEventListener('pointerdown', () => { if (current === 'private') restartTimer(); });
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+/* ---------- אנימציות "משיכת עין" במסך הראשי ---------- */
+const steps = [...document.querySelectorAll('#main .step')];
+let si = 0;
+setInterval(() => {
+  if (current !== 'main') return;
+  steps[si].classList.remove('on');
+  si = (si + 1) % steps.length;
+  steps[si].classList.add('on');
+}, 2200);
+setInterval(() => { if (current === 'main' && !document.hidden) jingle(); }, 14000);
+
+/* ---------- תגובה חיה: כשמישהו סורק, העמדה אומרת תודה ---------- */
+let lastScanId = null;
+let liveStatus = 'starting';
+let pollTimer = null;
+function celebrate(kind) {
+  const wa = kind === 'פתיחת וואטסאפ' || kind === 'wa';
+  document.getElementById('thanksTitle').textContent = wa ? 'תודה ששיתפתם!' : 'תודה רבה!';
+  document.getElementById('thanksSub').innerHTML = wa
+    ? 'ההודעה שלכם תגיע <strong>ישירות לבעל העסק</strong>.'
+    : 'עכשיו ממשיכים בטלפון: <strong>בוחרים כוכבים</strong> וכותבים כמה מילים.';
+  const q = document.getElementById(wa ? 'qr-private' : 'qr-review').getBoundingClientRect();
+  if (current === 'thanks') { fireConfetti(); restartTimer(); return; }
+  show('thanks', q.left + q.width / 2, q.top + q.height / 2);
+}
+async function pollScans() {
+  clearTimeout(pollTimer);
+  let next = CONFIG.pollSec * 1000;
+  if (sbReady && !document.hidden) {
+    try {
+      const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/latest_scan', { method: 'POST', headers: sbHeaders(true), body: JSON.stringify({ p_biz: biz.slug }), cache: 'no-store' });
+      if (r.status === 404) { liveStatus = 'not installed (run the SQL)'; next = 10 * 60 * 1000; }
+      else if (!r.ok) { liveStatus = 'http ' + r.status; next = 30 * 1000; }
+      else {
+        const rows = await r.json();
+        const row = Array.isArray(rows) ? rows[0] : rows;
+        const id = row && row.id ? Number(row.id) : 0;
+        liveStatus = 'on (last id ' + id + ')';
+        if (lastScanId !== null && id > lastScanId) celebrate(row.event);
+        lastScanId = id;
+      }
+    } catch (e) { liveStatus = 'error: ' + e.message; next = 30 * 1000; }
+  }
+  pollTimer = setTimeout(pollScans, next);
+}
+pollScans();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) pollScans(); });
+
+/* ---------- קונפטי ---------- */
+const canvas = document.getElementById('confetti');
+const ctx = canvas.getContext('2d');
+let pieces = [];
+let confettiOn = false;
+function fireConfetti() {
+  if (reduced) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  const colors = ['#E0BC62', '#A87B22', '#C3343B', '#1F8F55', '#4285F4', '#F1D58C'];
+  pieces = [];
+  for (let i = 0; i < 160; i++) {
+    const fromLeft = i % 2 === 0;
+    pieces.push({
+      x: fromLeft ? -10 : w + 10, y: h * (.55 + Math.random() * .35),
+      vx: (fromLeft ? 1 : -1) * (6 + Math.random() * 9), vy: -(10 + Math.random() * 12),
+      rot: Math.random() * 6, vr: (Math.random() - .5) * .4,
+      size: 8 + Math.random() * 10, color: colors[i % colors.length],
+      star: Math.random() < .35
+    });
+  }
+  if (!confettiOn) { confettiOn = true; requestAnimationFrame(drawConfetti); }
+}
+function starPath(r) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = Math.PI / 5 * i - Math.PI / 2, rr = i % 2 ? r * .45 : r;
+    ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+  }
+  ctx.closePath();
+}
+function drawConfetti() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  ctx.clearRect(0, 0, w, h);
+  pieces.forEach(p => {
+    p.vy += .32; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.color;
+    if (p.star) { starPath(p.size * .7); ctx.fill(); }
+    else ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2 * Math.abs(Math.cos(p.rot * 2)) + 2);
+    ctx.restore();
+  });
+  pieces = pieces.filter(p => p.y < h + 40);
+  if (pieces.length) requestAnimationFrame(drawConfetti);
+  else { confettiOn = false; ctx.clearRect(0, 0, w, h); }
+}
+
+/* ---------- מצב אבחון: פותחים את האתר עם #debug בסוף הכתובת ---------- */
+const VERSION = '13 (always-on QR + live thanks)';
+if (location.hash === '#debug') {
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;left:10px;bottom:10px;z-index:99;background:#111;color:#7CFC7C;font:14px/1.6 monospace;padding:14px;border-radius:10px;max-width:92vw;max-height:70vh;overflow:auto;direction:ltr;text-align:left;-webkit-user-select:text;user-select:text';
+  const say = m => { const d = document.createElement('div'); d.textContent = m; box.appendChild(d); };
+  say('version: ' + VERSION);
+  say('business: ' + BIZ + ' | device: ' + deviceName());
+  say('database: ' + (sbReady ? SUPABASE_URL : 'NOT CONFIGURED'));
+  setTimeout(() => { say('business config: ' + bizStatus); say('live thanks: ' + liveStatus); }, 2000);
+  const mk = (label, fn) => {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.style.cssText = 'margin:10px 8px 4px 0;padding:12px 18px;font:inherit;border-radius:8px';
+    b.addEventListener('click', e => { e.stopPropagation(); fn(); });
+    box.appendChild(b);
+  };
+  mk('Send test', () => {
+    const t0 = Date.now();
+    say('sending debug-test...');
+    track('debug-test', 'debug', how => say('debug-test: ' + how + ' after ' + (Date.now() - t0) + 'ms'));
+  });
+  mk('Preview thanks', () => celebrate('scan'));
+  box.addEventListener('click', e => e.stopPropagation());
+  box.addEventListener('pointerdown', e => e.stopPropagation());
+  document.body.appendChild(box);
+}
+</script>
+</body>
+</html>
