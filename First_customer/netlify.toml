@@ -1,0 +1,4 @@
+# Static site: the files in this folder are published as-is, no build step.
+# The base directory ("First_customer/") is configured in the Netlify project settings.
+[build]
+  publish = "."
