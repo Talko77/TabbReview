@@ -1,0 +1,13 @@
+// Cloudflare: publish everything in the "sites" folder as one site.
+// Each customer is a folder inside "sites" (for example sites/daniel-bags/),
+// and is served at /<folder>/ (for example /daniel-bags/).
+{
+  "name": "tabbreview",
+  "compatibility_date": "2026-11-04",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "./sites"
+  }
+}
