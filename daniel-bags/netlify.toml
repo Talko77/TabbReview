@@ -1,4 +1,0 @@
-# Static site: the files in this folder are published as-is, no build step.
-# In the Netlify project settings, set Base directory to: daniel-bags
-[build]
-  publish = "."
